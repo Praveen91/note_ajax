@@ -1,0 +1,117 @@
+<?php
+/**
+ * @file
+ * Creting a form for ajax node save function.
+ */
+
+/**
+ * Implements Callback function for form build.
+ */
+function _form_note_ajax_add() {
+  $form = array();
+  $form['container'] = array(
+    '#type' => 'container',
+  );
+  $form['container']['title'] = array(
+     '#title' => t('Note Name'),
+     '#type' => 'textfield',
+     '#required' => TRUE,
+  );
+
+  $form['container']['body'] = array(
+     '#title' => t('Notes'),
+     '#type' => 'textarea',
+     '#required' => TRUE,
+  );
+
+  $form['actions']['submit'] = array(
+     '#value' => t('Submit'),
+     '#type' => 'submit',
+     '#ajax' => array(
+        'callback' => '_form_note_ajax_add_callback',
+        'progress' => array('type' => 'throbber'),
+     ),
+     '#attributes' => array(
+        'class' => array('action-submit'),
+     ),
+     '#submit' => array('_form_note_ajax_add_submit'),
+  );
+  $form['actions']['cancel'] = array(
+     '#value' => t('Cancel'),
+     '#type' => 'button',
+     '#attributes' => array(
+         'class' => array('action-cancel'),
+     ),
+  );
+  $form['actions']['add'] = array(
+     '#value' => t('Add Note'),
+     '#type' => 'button',
+     '#attributes' => array(
+        'class' => array('action-add'),
+     ),
+  );
+  return $form;
+}
+
+/**
+ * Ajax Callback function for return form.
+ */
+  function _form_note_ajax_add_callback($form, &$form_state) {
+      $form_state['rebuild'] = TRUE;
+     if (!form_get_errors()) {
+       global $user;
+       $newnode = new stdClass();
+       $newnode->title = $form_state['input']['title'];
+       $newnode->body['und'][0]['value'] = $form_state['input']['body'];
+       $newnode->language = 'und';
+       $newnode->uid = $user->uid;
+       $newnode->type = 'note_items';
+
+       $newnode = node_submit($newnode);
+       node_save($newnode);
+
+       if (isset($newnode->nid)) {
+         $nodeview = node_view($newnode);
+   // this also work if we not using js
+   //       $commands[] = ajax_command_prepend('.view-note-item-ajax ul', '<li>' . drupal_render($nodeview) . '</li>');
+ 
+   // for jquery effects we using "prepend_note_view" for prepend data.
+           $commands[] = ajax_command_invoke('.view-note-item-ajax ul', 'prepend_note_view', array('<li>' . drupal_render($nodeview) . '</li>'));
+       return array('#type' => 'ajax', '#commands' => $commands);
+
+       }
+
+     }
+     return $form;
+  }
+
+function _form_note_ajax_add_submit($form, $form_state){
+///krumo($form_state);
+  $form_state['input'] = array();
+  $form_state['rebuild'] = TRUE;
+}
+
+
+/**
+ * Implements hook_preprocess_hook().
+ */
+function note_ajax_preprocess_page(&$variables) {
+    $arg = '';
+    $arg = arg(0);
+    if ($arg == 'view-notes-item') {
+      //krumo($variables);
+      $note_form = drupal_get_form('_form_note_ajax_add');
+      //krumo($note_form);
+
+      // Also you can use like this
+      //$variables['page']['content']['system_main']['ajax_add_note'] = drupal_get_form('_form_note_ajax_add');
+
+      // this added in last element of system main.
+      //$variables['page']['content']['system_main']['ajax_add_note']['#markup'] = drupal_render($note_form);
+
+      array_unshift($variables['page']['content']['system_main'], $note_form);
+      //krumo($variables);
+      drupal_add_js(drupal_get_path('module', 'note_ajax') . '/js/note_ajax.js',
+       array('tpye' => 'file', 'scope' => 'header'));
+    }
+}

@@ -1,0 +1,5 @@
+name = Ajax Note item
+description = Ajax form for note item content type.
+core = 7.x
+version = 7.x-1.0
+package = Custom
